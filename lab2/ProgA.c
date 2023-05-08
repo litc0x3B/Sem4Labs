@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
+#include <time.h>
 #include <unistd.h>
 
 #define WAIT_SECONDS 3
@@ -12,7 +14,12 @@ pid_t g_childPID = 0;
 
 void SigHandler(int signum) {
   int wstatus;
-  sleep(WAIT_SECONDS);
+  clock_t clockStart = clock();
+  while ((float)(clock() - clockStart ) / CLOCKS_PER_SEC < WAIT_SECONDS) {
+    if (waitpid(g_childPID, &wstatus, WNOHANG) == g_childPID) {
+      exit(wstatus);
+    }
+  }
   if (waitpid(g_childPID, &wstatus, WNOHANG) == 0) {
     kill(g_childPID, SIGTERM);
   }

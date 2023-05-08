@@ -57,6 +57,7 @@ int main() {
   if (!DEBUG_MODE) {
     kill(getppid(), SIGUSR1);
   }
+  while(1);
 
   int pipe1[2] = {-1, -1};
   int pipe2[2];
