@@ -6,7 +6,6 @@
 
 Block *g_firstBlock = NULL;
 Block *g_lastBlock = NULL;
-int g_heaps = 0;
 pthread_mutex_t g_MutexMemMng = PTHREAD_MUTEX_INITIALIZER;
 
 long GetPageSize()
@@ -28,10 +27,7 @@ Block *GetFirstBlock(Heap *heap)
   return (Block *)((char *)heap + sizeof(Heap));
 }
 
-void *GetData(Block *block)
-{
-  return (void *)((char *)block + sizeof(Block));
-}
+void *GetData(Block *block) { return (void *)((char *)block + sizeof(Block)); }
 
 Block *GetBlockFromData(void *data)
 {
@@ -63,7 +59,7 @@ Block *TryFindFreeBlock(size_t size)
   Block *curBlock1 = g_firstBlock;
   Block *curBlock2 = g_lastBlock;
 
-  do 
+  do
   {
     if (curBlock1->size >= size && curBlock1->isFree)
     {
@@ -95,8 +91,8 @@ Block *SplitBlock(size_t newSize, Block *oldBlock)
 
   block2->prev = block1;
   block2->size -= newSize + sizeof(Block);
-  if (block2->next != NULL) 
-  {  
+  if (block2->next != NULL)
+  {
     block2->next->prev = block2;
   }
 
@@ -151,14 +147,14 @@ Block *RemoveBlock(Block *block)
     return block;
   }
 
-  if(nextBlock == NULL)
+  if (nextBlock == NULL)
   {
     prevBlock->next = NULL;
     g_lastBlock = prevBlock;
     return block;
   }
 
-  if(prevBlock == NULL)
+  if (prevBlock == NULL)
   {
     nextBlock->prev = NULL;
     g_firstBlock = nextBlock;
@@ -173,12 +169,15 @@ Block *RemoveBlock(Block *block)
 
 Heap *HeapInit(size_t size, Heap *newHeap)
 {
-  g_heaps++;
   newHeap->size = size;
 
   size -= sizeof(Block);
   Block *newBlock = GetFirstBlock(newHeap);
-  *newBlock = (Block){.heap = newHeap, .prev = NULL, .next = NULL, .isFree = true, .size = size};
+  *newBlock = (Block){.heap = newHeap,
+                      .prev = NULL,
+                      .next = NULL,
+                      .isFree = true,
+                      .size = size};
 
   if (g_firstBlock == NULL)
   {
@@ -194,14 +193,16 @@ Heap *HeapInit(size_t size, Heap *newHeap)
   return newHeap;
 }
 
-Heap *MapHeap(size_t size) 
+Heap *MapHeap(size_t size)
 {
-  size = (size + sizeof(Heap) + sizeof(Block) + GetPageSize()) * 2 / GetPageSize() * GetPageSize();
+  size = (size + sizeof(Heap) + sizeof(Block) + GetPageSize()) * 2 /
+         GetPageSize() * GetPageSize();
   if (size < MIN_HEAP_SIZE)
   {
     size = MIN_HEAP_SIZE;
   }
-  Heap *newHeap = mmap(NULL,  size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  Heap *newHeap = mmap(NULL, size, PROT_READ | PROT_WRITE,
+                       MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   return HeapInit(size - sizeof(Heap), newHeap);
 }
 
@@ -251,6 +252,4 @@ void MyFree(void *ptr)
     munmap(block->heap, block->heap->size);
   }
   pthread_mutex_unlock(&g_MutexMemMng);
-
 }
-
