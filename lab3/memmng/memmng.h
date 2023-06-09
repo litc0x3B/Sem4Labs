@@ -6,12 +6,10 @@
 
 
 void *MyMalloc(size_t size);
-void *MyFree(void *ptr);
+void MyFree(void *ptr);
 
 
 //internal funcs and defs
-
-
 typedef struct s_heap {
   size_t size;
 } Heap;
@@ -26,9 +24,13 @@ typedef struct s_block {
 
 Block *GetFirstBlock(Heap *heap);
 void *GetData(Block *block);
+Block *GetBlockFromData(void *data);
+bool IsLastBlockInHeap(Block *block);
 
 Block *TryFindFreeBlock(size_t size);
 Block *SplitBlock(size_t newSize, Block *block);
+Block *MergeBlockWithNext(Block *block);
+
 
 Heap *MapHeap(size_t size);
 

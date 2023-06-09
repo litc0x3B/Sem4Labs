@@ -5,7 +5,7 @@
 #include "memmng/memmng.h"
 
 //you can change theese consts however you want
-#define THREADS_PER_FUNC 256 //THREADS / 3
+#define THREADS_PER_FUNC 20 //THREADS / 3
 #define OUTPUT_FILE_NAME "out.txt"
 const size_t BLOCK_SIZES[] = {16, 1024, 1024*1024};
 //-----------------------------------------------------------------
@@ -22,6 +22,7 @@ void *AllocThread(void* arg)
 
     for (int blockNum = 0; blockNum < BLOCKS_PER_THREAD; blockNum++)
     {
+        printf("thread group %d: is allocaing block of %lu bytes\n", threadGroup, (unsigned long)BLOCK_SIZES[blockNum]);
         g_blocks[threadGroup][blockNum] = MyMalloc(sizeof(unsigned char) * BLOCK_SIZES[blockNum]);
         printf("thread group %d: allocated block of %lu bytes at the addr %p\n", threadGroup, (unsigned long)BLOCK_SIZES[blockNum], g_blocks[threadGroup][blockNum]);
     }
@@ -61,7 +62,7 @@ void *WriteAndFreeThread(void* arg)
             fprintf(g_outputFile, " %d", (int)g_blocks[threadGroup][blockNum][i]);
         }
 
-        // free(g_blocks[threadGroup][blockNum]);
+        MyFree(g_blocks[threadGroup][blockNum]);
         fprintf(g_outputFile, "\n");
     }
 
@@ -84,7 +85,7 @@ void *CreateThreadsThread(void* arg)
     pthread_join(newThread, NULL);
 
     printf("thread group %d: done!\n", *(int *)arg);
-    // free(arg);
+    MyFree(arg);
     return NULL;
 }
 
@@ -92,6 +93,7 @@ int main()
 {
     _Static_assert(THREADS_PER_FUNC <= UCHAR_MAX + 1, "THREADS_PER_FUNC should be less or equal than UCHAR_MAX + 1");
     g_outputFile = fopen(OUTPUT_FILE_NAME, "w");
+
 
     pthread_t threads[THREADS_PER_FUNC];
     for (int threadGroup = 0; threadGroup < THREADS_PER_FUNC; threadGroup++)
@@ -105,6 +107,7 @@ int main()
     {
         pthread_join(threads[threadGroup], NULL);
     }
+
     fclose(g_outputFile);
 
 
