@@ -209,7 +209,7 @@ Heap *MapHeap(size_t size)
 void *MyMalloc(size_t size)
 {
   const size_t align = _Alignof(max_align_t);
-  size = size + align & ~align;
+  size = size + (align - 1) & ~(align - 1);
   pthread_mutex_lock(&g_MutexMemMng);
 
   Block *resBlock;
