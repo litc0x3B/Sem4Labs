@@ -2,12 +2,15 @@
 #include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "memmng/memmng.h"
 
 // you can change theese consts however you want
-#define THREADS_PER_FUNC 20  // THREADS / 3
-#define OUTPUT_FILE_NAME "out.txt"
+#define CYCLES 4
+#define THREADS_PER_FUNC 2 // THREADS / 3
+const char OUTPUT_FILE_NAME[] = "out";
+const char EXTENSION[] = "txt";
 const size_t BLOCK_SIZES[] = {16, 1024, 1024 * 1024};
 //-----------------------------------------------------------------
 
@@ -24,11 +27,9 @@ void *AllocThread(void *arg)
   {
     printf("thread group %d: is allocaing block of %lu bytes\n", threadGroup,
            (unsigned long)BLOCK_SIZES[blockNum]);
-    g_blocks[threadGroup][blockNum] =
-        MyMalloc(sizeof(unsigned char) * BLOCK_SIZES[blockNum]);
-    printf("thread group %d: allocated block of %lu bytes at the addr %p\n",
-           threadGroup, (unsigned long)BLOCK_SIZES[blockNum],
-           g_blocks[threadGroup][blockNum]);
+    g_blocks[threadGroup][blockNum] = MyMalloc(sizeof(unsigned char) * BLOCK_SIZES[blockNum]);
+    printf("thread group %d: allocated block of %lu bytes at the addr %p\n", threadGroup,
+           (unsigned long)BLOCK_SIZES[blockNum], g_blocks[threadGroup][blockNum]);
   }
 
   return NULL;
@@ -53,8 +54,7 @@ void *FillThread(void *arg)
 void *WriteAndFreeThread(void *arg)
 {
   int threadGroup = *(int *)arg;
-  printf("thread group %d: waiting before start writing to file\n",
-         threadGroup);
+  printf("thread group %d: waiting before start writing to file\n", threadGroup);
   flockfile(g_outputFile);
   printf("thread group %d: writing to file\n", threadGroup);
 
@@ -94,27 +94,48 @@ void *CreateThreadsThread(void *arg)
   return NULL;
 }
 
+int GetNumOfDigits(int num)
+{
+  int count = 0;
+  do
+  {
+    num /= 10;
+    ++count;
+  } while (num != 0);
+
+  return count;
+}
+
 int main()
 {
   _Static_assert(THREADS_PER_FUNC <= UCHAR_MAX + 1,
                  "THREADS_PER_FUNC should be less or equal than UCHAR_MAX + 1");
-  g_outputFile = fopen(OUTPUT_FILE_NAME, "w");
-
-  pthread_t threads[THREADS_PER_FUNC];
-  for (int threadGroup = 0; threadGroup < THREADS_PER_FUNC; threadGroup++)
+  for (int i = 0; i < CYCLES; i++)
   {
-    int *threadGroupArg = MyMalloc(sizeof(int));
-    *threadGroupArg = threadGroup;
-    pthread_create(&threads[threadGroup], NULL, CreateThreadsThread,
-                   (void *)threadGroupArg);
-  }
+    char *fileNameWithExt = MyMalloc(
+        (GetNumOfDigits(i) + (sizeof(OUTPUT_FILE_NAME) + sizeof(EXTENSION)) / sizeof(char) + 2) *
+        sizeof(char));
+    
+    sprintf(fileNameWithExt, "%s%d%s%s", OUTPUT_FILE_NAME, i, ".", EXTENSION);
+    printf("%s\n", fileNameWithExt);
+    g_outputFile = fopen(fileNameWithExt, "w");
 
-  for (int threadGroup = 0; threadGroup < THREADS_PER_FUNC; threadGroup++)
-  {
-    pthread_join(threads[threadGroup], NULL);
-  }
+    pthread_t threads[THREADS_PER_FUNC];
+    for (int threadGroup = 0; threadGroup < THREADS_PER_FUNC; threadGroup++)
+    {
+      int *threadGroupArg = MyMalloc(sizeof(int));
+      *threadGroupArg = threadGroup;
+      pthread_create(&threads[threadGroup], NULL, CreateThreadsThread, (void *)threadGroupArg);
+    }
 
-  fclose(g_outputFile);
+    for (int threadGroup = 0; threadGroup < THREADS_PER_FUNC; threadGroup++)
+    {
+      pthread_join(threads[threadGroup], NULL);
+    }
+
+    MyFree(fileNameWithExt);
+    fclose(g_outputFile);
+  }
 
   return 0;
 }
